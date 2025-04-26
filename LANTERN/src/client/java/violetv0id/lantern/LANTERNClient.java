@@ -8,3 +8,4 @@ public class LANTERNClient implements ClientModInitializer {
 		// This entrypoint is suitable for setting up client-specific logic, such as rendering.
 	}
 }
+
