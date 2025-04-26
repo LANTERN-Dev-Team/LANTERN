@@ -53,9 +53,29 @@
             </thead>
             <tbody>
                 <tr>
-                    <td class="code">400</td>
+                    <td class="code">4001</td>
+                    <td>Invalid</td>
+                    <td>Invalid packets / Handshake. Usually caused by modified clients or Packet loss.</td>
+                </tr>
+                <tr>
+                    <td class="code">4003</td>
+                    <td>Forbidden</td>
+                    <td>Banned / Forbidden from joining a server.</td>
+                </tr>
+                <tr>
+                    <td class="code">5000</td>
                     <td>Bad Request</td>
-                    <td>THE EVIL CODE <:'O</td>
+                    <td>Server is unavailable / Not responding.</td>
+                </tr>
+                <tr>
+                    <td class="code">5001</td>
+                    <td>Full</td>
+                    <td>Server is full.</td>
+                </tr>
+                <tr>
+                    <td class="code">5002</td>
+                    <td>Busy</td>
+                    <td>Server is busy and out of queue spots. [Try again later.]</td>
                 </tr>
             </tbody>
         </table>
