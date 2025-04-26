@@ -1,6 +1,6 @@
 # LANTERN
 Free, Open-Source, Peer-to-Peer multiplayer for Minecraft.
-
+![transparente7341b_0](https://github.com/user-attachments/assets/411c266a-7fde-4cdd-bb05-0f8ba65842ed)
 [See the Modrinth page!](https://modrinth.com/project/p2p-lantern)
 
 
