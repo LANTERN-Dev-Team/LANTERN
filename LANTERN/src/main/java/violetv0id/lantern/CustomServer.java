@@ -10,6 +10,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.imageio.IIOException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -33,7 +36,7 @@ public class CustomServer
     public int maxPlayers = 8;
     public int joinRequests = 0;
     public int playerCount = 0;
-    private List<Socket> connectedClients = new ArrayList<>();
+    private Map<Socket, String> connectedClients = new LinkedHashMap<>();
     public Map<Socket, String> pendingConnections = new LinkedHashMap<>();
     private List<Socket> ignoreList = new ArrayList<>();
 
@@ -97,6 +100,7 @@ public class CustomServer
                         // authenticate (aka 'aUtHenTiCaTe' because it's not really authentication lmao)
                         if(Auth(client))
                         {
+                            SendImportant(client, "1000"); // acknowledgement
                             joinRequests++;
                             String username = "[USERNAME]"; // temporary
                             pendingConnections.put(client, username);
@@ -104,14 +108,14 @@ public class CustomServer
                         }
                         else
                         {
-                            SendImportant(client, "403"); // 403 - forbidden
+                            SendImportant(client, "4003"); // forbidden
                             client.close();
                         }
                     }
                     else
                     {
                         Socket client = socket.accept();
-                        SendImportant(client, "503"); // 503 - server full / server busy / temporarily unavailable, etc.
+                        SendImportant(client, "5001");
                         client.close();
                     }
                 }
@@ -119,7 +123,7 @@ public class CustomServer
             catch(IOException e)
             {
                 isRunning = false;
-                if(e.getMessage().toString() != "Socket closed") // the server is already closed, so no reason to do anything.--this also happens when you close the server for some reason.
+                if(e.getMessage().toString() == "Socket closed") // the server is already closed, so no reason to do anything.--this also happens when you close the server for some reason.
                     return;
 
                 try
@@ -138,12 +142,12 @@ public class CustomServer
         // players leaving
         new Thread(() ->
         {
-            for(Socket connection : connectedClients)
+            for(Map.Entry<Socket, String> connection : connectedClients.entrySet())
             {
-                if(connection.isClosed())
+                if(connection.getKey().isClosed())
                 {
-                    connectedClients.remove(connection);
-                    OnPlayerLeft(connection);
+                    connectedClients.remove(connection.getKey());
+                    OnPlayerLeft(connection.getKey());
                 }
             }
         }).start();
@@ -212,7 +216,7 @@ public class CustomServer
         }
     }
 
-    private void OnPlayerJoined(Socket player) // 'player' is a Socket, not a ServerPlayerEntity.
+    private void OnPlayerJoined(Socket player, String username) // 'player' is a Socket, not a ServerPlayerEntity.
     {
         // create player
 
@@ -222,7 +226,8 @@ public class CustomServer
 
         // other
         playerCount++;
-        connectedClients.add(player);
+        Map.Entry<Socket, String> newPlayer = Map.entry(player, username);
+        connectedClients.put(player, username);
         if(pendingConnections.containsKey(player))
             pendingConnections.remove(player);
 
@@ -280,7 +285,7 @@ public class CustomServer
     {
         for(Map.Entry<Socket, String> pending : pendingConnections.entrySet())
         {
-            OnPlayerJoined(pending.getKey());
+            OnPlayerJoined(pending.getKey(), pending.getValue());
         }
     }
 
@@ -295,7 +300,7 @@ public class CustomServer
                     if(pending.getKey().getInetAddress().equals(InetAddress.getByName(ip)))
                     {
                         LANTERN.ChatClient("Allowing '" + ip + "''...");
-                        OnPlayerJoined(pending.getKey());
+                        OnPlayerJoined(pending.getKey(), pending.getValue());
                     }
                     LANTERN.ChatClient("Couldn't find " + ip + " in pending connections!");
                 }
@@ -317,12 +322,119 @@ public class CustomServer
             LANTERN.ChatClient("Allowing '" + ip + "''...");
 
             if(lastEntry != null)
-                OnPlayerJoined(lastEntry.getKey());
+                OnPlayerJoined(lastEntry.getKey(), lastEntry.getValue());
         }
     }
 
     public void RejectConnection(String ip)
     {
+        Map.Entry<Socket, String> p = GetInternalPlayerByIp(ip, PlayerSearchMode.Pending);
+        if(p != null)
+        {
+            try
+            {
+                Socket p_c = p.getKey();
+                LANTERN.ChatClient("Rejected " + p.getValue() + " and added them to the ignore list.");
+                ignoreList.add(p_c);
+                SendImportant(p_c, "5003");
+                p_c.close();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private Socket GetClientByIp(String ip, playerSearchMode mode)
+    {
+        // check active connections first
+        for(Map.Entry<Socket, String> c : connectedClients.entrySet())
+        {
+            if(c.getKey().getInetAddress().toString().equals(ip))
+            {
+                return c.getKey();
+            }
+        }
         
+        // then pending connections
+        for(Map.Entry<Socket, String> c : pendingConnections.entrySet())
+        {
+            if(c.getKey().getInetAddress().toString().equals(ip))
+            {
+                return c.getKey();
+            }
+        }
+
+        // and if none are found, return null.
+        return null;
+    }
+
+    private Map.Entry<Socket, String> GetInternalPlayerByIp(String playerIp, playerSearchMode mode)
+    {
+        Socket c = GetClientByIp(playerIp, mode);
+        if(c != null)
+        {
+            if(mode.equals(PlayerSearchMode.Connected) || mode.equals(PlayerSearchMode.Any))
+            {
+                for(Map.Entry<Socket, String> map : connectedClients.entrySet())
+                {
+                    if(map.getKey().equals(c))
+                    {
+                        return map;
+                    }
+                }
+            }
+            if(mode.equals(PlayerSearchMode.Pending) || mode.equals(PlayerSearchMode.Any))
+            {
+                for(Map.Entry<Socket, String> map : pendingConnections.entrySet())
+                {
+                    if(map.getKey().equals(c))
+                    {
+                        return map;
+                    }
+                }
+            }
+            return null;
+        }
+        return null;
+    }
+
+    private Map.Entry<Socket, String> GetInternalPlayerBySocket(Socket playerSocket, playerSearchMode mode)
+    {
+        if(playerSocket != null)
+        {
+            if(mode.equals(PlayerSearchMode.Connected) || mode.equals(PlayerSearchMode.Any))
+            {
+                for(Map.Entry<Socket, String> map : connectedClients.entrySet())
+                {
+                    if(map.getKey().equals(playerSocket))
+                    {
+                        return map;
+                    }
+                }
+            }
+            if(mode.equals(PlayerSearchMode.Pending) || mode.equals(PlayerSearchMode.Any))
+            {
+                for(Map.Entry<Socket, String> map : pendingConnections.entrySet())
+                {
+                    if(map.getKey().equals(playerSocket))
+                    {
+                        return map;
+                    }
+                }
+            }
+            return null;
+        }
+        return null;
+    }
+
+    private static playerSearchMode PlayerSearchMode;
+
+    private static enum playerSearchMode
+    {
+        Connected,
+        Pending,
+        Any
     }
 }

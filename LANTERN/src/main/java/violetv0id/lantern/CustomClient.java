@@ -73,7 +73,7 @@ public class CustomClient
             // wait for response
             BufferedReader in = new BufferedReader(new InputStreamReader(serverSocket.getInputStream()));
             String response = in.readLine();
-            LANTERN.Log("Got : " + response);
+            LANTERN.ChatClient("Recieved from server : " + response);
         }
         catch(IOException e)
         {

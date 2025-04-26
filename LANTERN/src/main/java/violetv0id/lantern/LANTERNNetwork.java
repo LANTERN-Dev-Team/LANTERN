@@ -204,4 +204,9 @@ public class LANTERNNetwork
         LANTERN.ChatClient("Accepting all requests... [" + LANTERNNetwork.joinRequests + "]");
         server.AcceptAll();
     }
+
+    public static void reject(String ip)
+    {
+        server.RejectConnection(ip);
+    }
 }
