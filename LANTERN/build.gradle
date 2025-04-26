@@ -11,7 +11,7 @@ base {
 }
 
 repositories {
-    maven { url 'https://maven.wispforest.io/releases/' }
+    // nothing here unless we use a library mod
 }
 
 loom {
@@ -34,9 +34,7 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:0.83.0+1.20.1"
-
-	modImplementation "io.wispforest:owo-lib:${project.owo_version}"
-    include "io.wispforest:owo-sentinel:${project.owo_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-screen-api-v1:1.0.27+1.20.1"
 }
 
 processResources {
