@@ -225,6 +225,7 @@ public class CustomServer
     {
         LANTERN.ChatClient("Server closed.");
         playerCount = 0;
+        connectedClients.clear();
         pendingConnections.clear();
     }
 
