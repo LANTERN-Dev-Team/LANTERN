@@ -209,4 +209,9 @@ public class LANTERNNetwork
     {
         server.RejectConnection(ip);
     }
+    
+    public static void rejectAll()
+    {
+        server.RejectEvery();
+    }
 }

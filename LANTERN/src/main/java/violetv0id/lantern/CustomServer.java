@@ -326,6 +326,22 @@ public class CustomServer
         }
     }
 
+    public void RejectEvery()
+    {
+        for(Map.Entry<Socket, String> c : pendingConnections.entrySet())
+        {
+            RejectConnection(c.getKey().getInetAddress().toString());
+            try
+            {
+                wait(10);
+            }
+            catch(InterruptedException interrupted)
+            {
+                interrupted.printStackTrace();
+            }
+        }
+    }
+
     public void RejectConnection(String ip)
     {
         Map.Entry<Socket, String> p = GetInternalPlayerByIp(ip, PlayerSearchMode.Pending);
@@ -435,6 +451,7 @@ public class CustomServer
     {
         Connected,
         Pending,
+        Admin,
         Any
     }
 }

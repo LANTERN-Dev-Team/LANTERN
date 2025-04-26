@@ -22,25 +22,30 @@ public class LANTERNCommand
         dispatcher.register(CommandManager.literal("lantern")
             .then(CommandManager.literal("host")
                 .then(argument("maxPlayers", IntegerArgumentType.integer(1, 16))
-                    .executes(LANTERNCommand::hostCommand)))
+                    .executes(LANTERNCommand::hostCommand))) // /lantern host (int)
 
             .then(CommandManager.literal("disconnect")
-                .executes(LANTERNCommand::disconnectCommand))
+                .executes(LANTERNCommand::disconnectCommand)) // /lantern disconnect
 
             .then(CommandManager.literal("join")
                 .then(argument("ipToJoin", StringArgumentType.string())
-                    .executes(LANTERNCommand::joinCommand)))
+                    .executes(LANTERNCommand::joinCommand))) // /lantern join (string)
+
             .then(CommandManager.literal("requestlist")
-                .executes(LANTERNCommand::requestList))
+                .executes(LANTERNCommand::requestList)) // /lantern requestlist
+
             .then(CommandManager.literal("accept")
                 .then(argument("ipToAccept", StringArgumentType.string())
-                    .executes(LANTERNCommand::acceptSpecific))
-                .executes(LANTERNCommand::acceptLatest))
+                    .executes(LANTERNCommand::acceptSpecific)) // /lantern accept (string)
+                .executes(LANTERNCommand::acceptLatest)) // /lantern acccept
+
             .then(CommandManager.literal("acceptall")
-                .executes(LANTERNCommand::acceptAll))
+                .executes(LANTERNCommand::acceptAll)) // /lantern acceptall
+
             .then(CommandManager.literal("reject"))
                 .then(argument("ipToReject", StringArgumentType.string()))
-                    .executes(LANTERNCommand::rejectRequest));
+                    .executes(LANTERNCommand::rejectRequest) // /lantern reject (ip)
+                .executes(LANTERNCommand::rejectEvery)); // /lantern reject
     }
 
     private static int hostCommand(CommandContext<ServerCommandSource> context) throws CommandSyntaxException
@@ -94,6 +99,12 @@ public class LANTERNCommand
     {
         String ipToReject = StringArgumentType.getString(context, "ipToReject");
         LANTERNNetwork.reject(ipToReject);
+        return 1;
+    }
+
+    private static int rejectEvery(CommandContext<ServerCommandSource> context) throws CommandSyntaxException
+    {
+        LANTERNNetwork.rejectAll();
         return 1;
     }
 }
