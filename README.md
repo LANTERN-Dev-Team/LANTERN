@@ -15,4 +15,4 @@ While you are required to use your public IP address, it is not collected or sha
 
 
 # Error Codes
-Got an error code? Find out why: [LINK-TO-PAGE]
+Got an error code? Find out why [here](https://lantern-dev-team.github.io/LANTERN/err_codes)!
