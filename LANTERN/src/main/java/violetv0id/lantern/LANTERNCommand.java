@@ -37,7 +37,10 @@ public class LANTERNCommand
                     .executes(LANTERNCommand::acceptSpecific))
                 .executes(LANTERNCommand::acceptLatest))
             .then(CommandManager.literal("acceptall")
-                .executes(LANTERNCommand::acceptAll)));
+                .executes(LANTERNCommand::acceptAll))
+            .then(CommandManager.literal("reject"))
+                .then(argument("ipToReject", StringArgumentType.string()))
+                    .executes(LANTERNCommand::rejectRequest));
     }
 
     private static int hostCommand(CommandContext<ServerCommandSource> context) throws CommandSyntaxException
@@ -84,6 +87,13 @@ public class LANTERNCommand
     private static int acceptAll(CommandContext<ServerCommandSource> context) throws CommandSyntaxException
     {
         LANTERNNetwork.acceptAll();
+        return 1;
+    }
+
+    private static int rejectRequest(CommandContext<ServerCommandSource> context) throws CommandSyntaxException
+    {
+        String ipToReject = StringArgumentType.getString(context, "ipToReject");
+        LANTERNNetwork.reject(ipToReject);
         return 1;
     }
 }

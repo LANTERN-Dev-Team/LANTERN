@@ -35,6 +35,7 @@ public class CustomServer
     public int playerCount = 0;
     private List<Socket> connectedClients = new ArrayList<>();
     public Map<Socket, String> pendingConnections = new LinkedHashMap<>();
+    private List<Socket> ignoreList = new ArrayList<>();
 
 
     // minecraft
@@ -92,10 +93,20 @@ public class CustomServer
                     if(playerCount < maxPlayers)
                     {
                         Socket client = socket.accept();
-                        joinRequests++;
-                        String username = "[USERNAME]"; // temporary
-                        pendingConnections.put(client, username);
-                        LANTERN.ChatClient(username + " has requested to join. [Type '/lantern requestlist' for more details.]");
+
+                        // authenticate (aka 'aUtHenTiCaTe' because it's not really authentication lmao)
+                        if(Auth(client))
+                        {
+                            joinRequests++;
+                            String username = "[USERNAME]"; // temporary
+                            pendingConnections.put(client, username);
+                            LANTERN.ChatClient(username + " has requested to join! [Type '/lantern requestlist' for more details.]");
+                        }
+                        else
+                        {
+                            SendImportant(client, "403"); // 403 - forbidden
+                            client.close();
+                        }
                     }
                     else
                     {
@@ -108,8 +119,7 @@ public class CustomServer
             catch(IOException e)
             {
                 isRunning = false;
-
-                if(e.getMessage().toString() != "Socket closed") // the server is already closed, so no reason to do anything. | this also happens when you close the server for some reason.
+                if(e.getMessage().toString() != "Socket closed") // the server is already closed, so no reason to do anything.--this also happens when you close the server for some reason.
                     return;
 
                 try
@@ -172,6 +182,19 @@ public class CustomServer
         }).start();
     }
 
+    private boolean Auth(Socket client)
+    {
+        for(Socket c : ignoreList)
+        {
+            if(c.getInetAddress().toString().equals(client.getInetAddress().toString()))
+            {
+                LANTERN.Log("Ignored client '" + client.getInetAddress().toString() + "' tried to connect. [REJECTED]");
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void stop()
     {
         try
@@ -218,7 +241,14 @@ public class CustomServer
     private void OnServerStarted()
     {
         // do le other things
-        LANTERN.ChatClient("Server initialized and running on " + port);
+        if(LANTERN.devMode)
+        {
+            LANTERN.ChatClient("Server initialized and running on your network on " + port);
+        }
+        else
+        {
+            LANTERN.ChatClient("Server started! ");
+        }
     }
 
     private void OnServerStopped()
@@ -289,5 +319,10 @@ public class CustomServer
             if(lastEntry != null)
                 OnPlayerJoined(lastEntry.getKey());
         }
+    }
+
+    public void RejectConnection(String ip)
+    {
+        
     }
 }
