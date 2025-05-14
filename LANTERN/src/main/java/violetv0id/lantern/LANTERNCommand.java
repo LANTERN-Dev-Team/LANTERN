@@ -34,17 +34,20 @@ public class LANTERNCommand
             .then(CommandManager.literal("requestlist")
                 .executes(LANTERNCommand::requestList)) // /lantern requestlist
 
+            .then(CommandManager.literal("status")
+                .executes(LANTERNCommand::requestStatus)) // /lantern status
+
             .then(CommandManager.literal("accept")
-                .then(argument("ipToAccept", StringArgumentType.string())
-                    .executes(LANTERNCommand::acceptSpecific)) // /lantern accept (string)
+                .then(argument("ipToAccept", StringArgumentType.string()))
+                    .executes(LANTERNCommand::acceptSpecific) // /lantern accept (string)
                 .executes(LANTERNCommand::acceptLatest)) // /lantern acccept
 
             .then(CommandManager.literal("acceptall")
                 .executes(LANTERNCommand::acceptAll)) // /lantern acceptall
 
-            .then(CommandManager.literal("reject"))
-                .then(argument("ipToReject", StringArgumentType.string())
-                    .executes(LANTERNCommand::rejectRequest)) // /lantern reject (ip)
+            .then(CommandManager.literal("reject")
+                .then(argument("ipToReject", StringArgumentType.string())))
+                    .executes(LANTERNCommand::rejectRequest) // /lantern reject (ip)
                 .executes(LANTERNCommand::rejectEvery)); // /lantern reject
     }
 
@@ -73,6 +76,12 @@ public class LANTERNCommand
     private static int requestList(CommandContext<ServerCommandSource> context) throws CommandSyntaxException
     {
         LANTERNNetwork.showRequests();
+        return 1;
+    }
+
+    private static int requestStatus(CommandContext<ServerCommandSource> context) throws CommandSyntaxException
+    {
+        LANTERNNetwork.LogStatus();
         return 1;
     }
 

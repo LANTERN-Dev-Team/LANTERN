@@ -143,6 +143,23 @@ public class LANTERNNetwork
         }
     }
 
+    public static void LogStatus()
+    {
+        String connectionType = "a client";
+        if(server != null)
+            connectionType = "the host";
+        LANTERN.ChatClient("You are " + connectionType + ".");
+
+        String LanternServerStatus = "null"; String LanternClientStatus = "null";
+        if(server != null)
+            LanternServerStatus = "not null";
+        if(client != null)
+            LanternClientStatus = "not null";
+        LANTERN.ChatClient("[LanternServer is " + LanternServerStatus + "] [LanternClient is " + LanternClientStatus + "]");
+
+        LANTERN.ChatClient("\nThere are " + LANTERN.currentServer.getCurrentPlayerCount() + " players connected.");
+    }
+
     public static void connectTo(String target)
     {
         if(server != null || client != null)

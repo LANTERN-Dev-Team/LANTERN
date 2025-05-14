@@ -303,6 +303,7 @@ public class CustomServer
                     new GameProfile(playerUUID, username)
                 );
         
+                // this section has issues with the socket somehow being "closed".
                 LANTERN.Log_Dev("Creating LCC from SPE...");
                 if(playerSocket.isClosed())
                 {
@@ -346,7 +347,7 @@ public class CustomServer
                     false, 
                     integratedServer.getOverworld().isFlat(), 
                     Optional.empty(), 
-                    serverPlayerManager.getMaxPlayerCount()
+                    maxPlayers
                 );
                 LANTERN.Log_Dev("Sending packet...");
                 lanternClientConnection.send(joinPacket);
@@ -464,10 +465,13 @@ public class CustomServer
             {
                 lastEntry = entry;
             }
-            LANTERN.ChatClient("Allowing '" + ip + "''...");
+            LANTERN.ChatClient("Allowing '" + lastEntry.getValue() + "''...");
 
             if(lastEntry != null)
+            {
                 OnPlayerJoined(lastEntry.getKey(), lastEntry.getValue());
+                pendingConnections.remove(lastEntry);
+            }
         }
     }
 

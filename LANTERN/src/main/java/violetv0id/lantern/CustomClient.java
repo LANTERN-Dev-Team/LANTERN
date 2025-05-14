@@ -82,25 +82,26 @@ public class CustomClient
         try
         {
             // send username to server
+            String name = violetv0id.lantern.common.ClientUsername_Shared.username;
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(serverSocket.getOutputStream(), StandardCharsets.UTF_8), true);
-            writer.println(LANTERN.localClientUsername);
+            if(name != null && name != "")
+            {
+                writer.println(name);
+            }
+            else
+            {
+                LANTERN.Log("Local Client Username is null!");
+                disconnect();
+            }
 
             // wait for response, hopefully 1000--acknowledged.
             BufferedReader in = new BufferedReader(new InputStreamReader(serverSocket.getInputStream()));
             String response = in.readLine();
             LANTERN.ChatClient("Recieved from server : " + response);
-
-            // wait for second response.
-            String response2 = in.readLine();
         }
         catch(IOException e)
         {
             e.printStackTrace();
         }
-
-        // # old
-        // String localPlayerName = Utils.GetPlayerName();
-        // serverSocket.sendUrgentData(localPlayerName + " | sjr_");
-        // # ===============
     }
 }
