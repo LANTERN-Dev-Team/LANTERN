@@ -5,13 +5,21 @@ Free, Open-Source, Peer-to-Peer multiplayer for Minecraft.
 
 
 # Disclaimer
-While you are required to use your public IP address, it is not collected or shared.
+**Do not share your public IP address to people you do not trust.** We are not liable for any damages that result.
+**A lot of this code is an amalgamation of Sockets, packets, and a shitton of patched-together "solutions" to convince the game to accept the connection.**
+
+
+# Explanation
+In simple terms, the way Lantern works is as follows:
+- As you host, your **Minecraft client** opens the world to LAN, creating a sort of network.
+- When someone joins, their **Lantern client** sends a request, and the host's **Lantern server** responds with a basic handshake.
+- When you accept the connection, the host's **Lantern server** creates a UUID and ServerPlayerEntity using the username, and sends a packet for the connecting client to join the world through the LAN server.
 
 
 # Notes
-- Lantern is **very early** in development. It currently does not have any internal connection to minecraft other than basic events. [e.g. Joining a world.]
+- Lantern is **very early** in development. It currently has <ins>limited connction to the Minecraft client</ins>, meaning a lot of it is still work-in-progress.
+- The "Lantern client" and "Lantern server" are completely seperate from your "Minecraft server" or "Minecraft client".
 - Lantern *does* have a license, and while we want you to feel safe using our mod, we also want to protect our work, and our users.
-- **Do not share your public IP address to people you do not trust.** We are not liable for any damages that result.
 
 
 # Error Codes
