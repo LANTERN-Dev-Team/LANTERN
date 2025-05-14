@@ -60,6 +60,11 @@ public class LANTERNNetwork
 
     public static void startServer(int playerLimit)
     {
+        if(server != null || client != null)
+        {
+            LANTERN.ChatClient("You are already in a server! Please disconnect from the current server first.");
+        }
+
         Object lock = new Object();
         if(server == null)
         {
@@ -122,28 +127,29 @@ public class LANTERNNetwork
             else
                 the = 2;
         }
-        
-        if(the == 0)
+
+        if(the == 1)
         {
-            LANTERN.Log("Nothing to disconnect!");
-        }
-        else if(the == 1)
-        {
-            LANTERN.Log("Disconnected client!");
+            LANTERN.ChatClient("Disconnected from server!");
         }
         else if(the == 2)
         {
-            LANTERN.Log("Disconnected server!");
+            LANTERN.ChatClient("Closed server!");
         }
         else if(the == 3)
         {
             // im pretty sure this is impossible. running off of -3 sleep so too lazy to check.
-            LANTERN.Log("Disconnected client and server!");
+            LANTERN.ChatClient("Closed server and client!");
         }
     }
 
     public static void connectTo(String target)
     {
+        if(server != null || client != null)
+        {
+            LANTERN.ChatClient("You are already in a server! Please disconnect from the current server first.");
+        }
+        
         Object lock = new Object();
         if(client == null)
         {
@@ -178,40 +184,69 @@ public class LANTERNNetwork
 
     public static void showRequests()
     {
-        if(server.pendingConnections.size() > 0)
+        if(IsActiveAndRunning(server))
         {
-            LANTERN.ChatClient("# Active Join Requests [AJR's]"); // eventually implement timeout system and replace with "These time out after 60 seconds."
-            for(Map.Entry<Socket, String> request : server.pendingConnections.entrySet())
+            if(server.pendingConnections.size() > 0)
             {
-                LANTERN.ChatClient(request.getValue() + " | " + request.getKey().getInetAddress().toString());
+                LANTERN.ChatClient("# Active Join Requests [AJR's]\n"); // eventually implement timeout system and replace with "These time out after 60 seconds."
+                for(Map.Entry<Socket, String> request : server.pendingConnections.entrySet())
+                {
+                    LANTERN.ChatClient(request.getValue() + " | " + request.getKey().getInetAddress().toString());
+                }
+                LANTERN.ChatClient("\n");
+                LANTERN.ChatClient("# ===============");
             }
-            LANTERN.ChatClient("# ===============");
         }
     }
 
     public static void acceptLatest()
     {
-        server.AcceptConnection(null);
+        if(IsActiveAndRunning(server))
+        {
+            server.AcceptConnection(null);
+        }
     }
 
     public static void acceptSpecific(String ip)
     {
-        server.AcceptConnection(ip);
+        if(IsActiveAndRunning(server))
+        {
+            server.AcceptConnection(ip);
+        }
     }
 
     public static void acceptAll()
     {
-        LANTERN.ChatClient("Accepting all requests... [" + LANTERNNetwork.joinRequests + "]");
-        server.AcceptAll();
+        if(IsActiveAndRunning(server))
+        {
+            server.AcceptAll();
+        }
     }
 
     public static void reject(String ip)
     {
-        server.RejectConnection(ip);
+        if(IsActiveAndRunning(server))
+        {
+            server.RejectConnection(ip);
+        }
     }
     
     public static void rejectAll()
     {
-        server.RejectEvery();
+        if(IsActiveAndRunning(server))
+        {
+            server.RejectEvery();
+        }
+    }
+
+    private static boolean IsActiveAndRunning(CustomServer server)
+    {
+        if(server != null)
+        {
+            LANTERN.Log_Dev("Server running: " + server.isRunning);
+            return server.isRunning;
+        }
+        LANTERN.Log_Dev("LANTERNNetwork : server is null!");
+        return false;
     }
 }

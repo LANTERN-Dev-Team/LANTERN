@@ -2,9 +2,19 @@ package violetv0id.lantern;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import io.netty.buffer.Unpooled;
+import net.minecraft.util.Identifier;
+import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 
 public class CustomClient
 {
@@ -23,6 +33,7 @@ public class CustomClient
     public void connect()
     {
         LANTERN.ChatClient("[~]");
+
         new Thread(() ->
         {
             try
@@ -70,10 +81,17 @@ public class CustomClient
         LANTERN.Log("Authenticating...");
         try
         {
-            // wait for response
+            // send username to server
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(serverSocket.getOutputStream(), StandardCharsets.UTF_8), true);
+            writer.println(LANTERN.localClientUsername);
+
+            // wait for response, hopefully 1000--acknowledged.
             BufferedReader in = new BufferedReader(new InputStreamReader(serverSocket.getInputStream()));
             String response = in.readLine();
             LANTERN.ChatClient("Recieved from server : " + response);
+
+            // wait for second response.
+            String response2 = in.readLine();
         }
         catch(IOException e)
         {
@@ -84,10 +102,5 @@ public class CustomClient
         // String localPlayerName = Utils.GetPlayerName();
         // serverSocket.sendUrgentData(localPlayerName + " | sjr_");
         // # ===============
-    }
-
-    private void SendToServer(String mesasge)
-    {
-        LANTERN.Log("'SendToServer(String)' is not yet implimented.");
     }
 }

@@ -4,24 +4,43 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.channels.Channel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Collections;
+import java.util.Optional;
+import java.util.UUID;
 import javax.imageio.IIOException;
+
+import net.minecraft.world.World;
+import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
+import com.mojang.authlib.GameProfile;
+import violetv0id.lantern.LanternClientConnection;
+import net.minecraft.server.PlayerManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.PlayerManager;
 import net.minecraft.world.GameMode;
+import net.minecraft.network.ClientConnection;
+import net.minecraft.network.NetworkSide;
+import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 
 import net.minecraft.text.Text;
 
@@ -42,12 +61,14 @@ public class CustomServer
 
 
     // minecraft
-    private MinecraftServer integratedServer;
+    private MinecraftServer integratedServer = null;
+    private PlayerManager serverPlayerManager = null;
+    // private io.netty.channel.Channel integratedServerChannel = null;
 
 
     // server
-    private int port;
-    private ServerSocket socket;
+    private int port = 0;
+    private ServerSocket server_Socket = null;
 
 
 
@@ -61,18 +82,29 @@ public class CustomServer
     public void start()
     {
         // server initialization
-        // lan currently breaks the server :c
+        integratedServer = LANTERN.currentServer;
+        // LANTERN.localClient.getNetworkHandler().getConnection();
+
         /*
+        ClientConnection client_connection_ = LANTERN.localClient.networkHandler.getConnection();
+        integratedServerChannel = client_connection_.getChannel();
+        */
+
+        
+        // ...then open to LAN.
         LANTERN.Log_Dev("Opening to LAN..."); // this does a lot of the heavy-lifting for us
         try
         {
-            if(LANTERN.currentServer != null)
+            if(integratedServer != null)
             {
-                // temporarily force creative until proper options are implemented. | side note - GameMode has to be all caps; e.g. "CREATIVE".
-                LANTERN.currentServer.openToLan(GameMode.CREATIVE, true, port);
+                serverPlayerManager = integratedServer.getPlayerManager();
+
+                // temporarily force creative until proper options are implemented. | side note - GameMode has to be all caps; e.g. "SURVIVAL".
+                integratedServer.openToLan(GameMode.CREATIVE, true, port + 1); // port + 1 so it doesn't mess with the LANTERN server and the LAN server. [yes, they're different.]
             }
             else
             {
+                // should be impossible buuuuuuut
                 LANTERN.ChatClient("Current server is null! Try rejoining.");
             }
         }
@@ -80,31 +112,28 @@ public class CustomServer
         {
             LANTERN.ChatClient("Something went wrong. [Stage:LAN_SERVER]");
             e.printStackTrace();
+            return;
         }
-        */
 
         // starting server and handling new connections
         new Thread(() ->
         {
             try
             {
-                socket = new ServerSocket(port, 5, InetAddress.getByName("0.0.0.0"));
+                server_Socket = new ServerSocket(port, 5, InetAddress.getByName("0.0.0.0"));
+                isRunning = !server_Socket.isClosed();
                 LANTERN.ChatClient("Server started!");
                 LANTERN.Log("Server started on port " + port + ".");
-                while(socket != null && !socket.isClosed())
+                while(server_Socket != null && !server_Socket.isClosed())
                 {
                     if(playerCount < maxPlayers)
                     {
-                        Socket client = socket.accept();
+                        Socket client = server_Socket.accept();
 
-                        // authenticate (aka 'aUtHenTiCaTe' because it's not really authentication lmao)
+                        // authenticate (aka 'aUtHeNtIcAtE' because it's not really authentication lmao)
                         if(Auth(client))
                         {
-                            SendImportant(client, "1000"); // acknowledgement
-                            joinRequests++;
-                            String username = "[USERNAME]"; // temporary
-                            pendingConnections.put(client, username);
-                            LANTERN.ChatClient(username + " has requested to join! [Type '/lantern requestlist' for more details.]");
+                            HandleConnection(client);
                         }
                         else
                         {
@@ -114,11 +143,12 @@ public class CustomServer
                     }
                     else
                     {
-                        Socket client = socket.accept();
+                        Socket client = server_Socket.accept();
                         SendImportant(client, "5001");
                         client.close();
                     }
                 }
+                LANTERN.ChatClient("Server closed... [ie3]");
             }
             catch(IOException e)
             {
@@ -139,15 +169,42 @@ public class CustomServer
             }
         }).start();
 
+
         // players leaving
         new Thread(() ->
         {
-            for(Map.Entry<Socket, String> connection : connectedClients.entrySet())
+            while(server_Socket == null)
             {
-                if(connection.getKey().isClosed())
+                try
                 {
-                    connectedClients.remove(connection.getKey());
-                    OnPlayerLeft(connection.getKey());
+                    Thread.sleep(100);
+                    if(server_Socket == null)
+                        LANTERN.ChatClient("Waiting for Server Socket to initialize...");
+                }
+                catch(InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+
+            while(!server_Socket.isClosed())
+            {
+                for(Map.Entry<Socket, String> connection : connectedClients.entrySet())
+                {
+                    if(connection.getKey().isClosed())
+                    {
+                        connectedClients.remove(connection.getKey());
+                        OnPlayerLeft(connection.getKey());
+                    }
+                }
+
+                try
+                {
+                    Thread.sleep(100);
+                }
+                catch(InterruptedException e)
+                {
+                    e.printStackTrace();
                 }
             }
         }).start();
@@ -156,9 +213,9 @@ public class CustomServer
         // OnServerStarted() and OnServerStopped() logic
         new Thread(() ->
         {
-            while(socket != null)
+            while(server_Socket != null)
             {
-                if(!socket.isClosed())
+                if(!server_Socket.isClosed())
                 {
                     if(!isRunning)
                     {
@@ -176,7 +233,7 @@ public class CustomServer
                 }
                 try
                 {
-                    wait(100);
+                    Thread.sleep(100);
                 }
                 catch(InterruptedException e)
                 {
@@ -199,14 +256,28 @@ public class CustomServer
         return true;
     }
 
+    private void HandleConnection(Socket con)
+    {
+        new Thread(() ->
+        {
+            String response = Listen(con);
+            LANTERN.ChatClient("Client responded : " + response);
+            SendImportant(con, "1000"); // acknowledgement
+    
+            joinRequests++;
+            pendingConnections.put(con, response);
+            LANTERN.ChatClient(response + " has requested to join!");
+        }).start();
+    }
+
     public void stop()
     {
         try
         {
-            if(socket != null)
+            if(server_Socket != null)
             {
-                socket.close();
-                socket = null;
+                server_Socket.close();
+                server_Socket = null;
                 LANTERN.Log("Server stopped.");
             }
         }
@@ -216,30 +287,89 @@ public class CustomServer
         }
     }
 
-    private void OnPlayerJoined(Socket player, String username) // 'player' is a Socket, not a ServerPlayerEntity.
+    private void OnPlayerJoined(Socket playerSocket, String username)
     {
-        // create player
-
-        // ...
-
-        // integratedServer.getPlayerList().addPlayer(playerObject);
-
-        // other
-        playerCount++;
-        Map.Entry<Socket, String> newPlayer = Map.entry(player, username);
-        connectedClients.put(player, username);
-        if(pendingConnections.containsKey(player))
-            pendingConnections.remove(player);
-
-        String ip = player.getInetAddress().toString();
-        LANTERN.ChatClient(ip + " has connected.");
-        LANTERN.Log(ip + " has connected.");
+        new Thread(() ->
+        {
+            try
+            {
+                LANTERN.Log_Dev("Creating UUID from " + username + "...");
+                UUID playerUUID = UUID.nameUUIDFromBytes(username.getBytes(StandardCharsets.UTF_8));
+    
+                LANTERN.Log_Dev("Creating SPE from connection...");
+                ServerPlayerEntity playerEntity = new ServerPlayerEntity(
+                    integratedServer, 
+                    integratedServer.getOverworld(), 
+                    new GameProfile(playerUUID, username)
+                );
+        
+                LANTERN.Log_Dev("Creating LCC from SPE...");
+                if(playerSocket.isClosed())
+                {
+                    while(playerSocket.isClosed())
+                    {
+                        try
+                        {
+                            Thread.sleep(100);
+                        }
+                        catch(InterruptedException e)
+                        {
+                            e.printStackTrace();
+                        }
+                        if(playerSocket.isClosed())
+                        {
+                            LANTERN.Log_Dev("OnPlayerJoined() is paused by playerSocket being closed!");
+                        }
+                    }
+                }
+                LanternClientConnection lanternClientConnection = new LanternClientConnection(playerSocket);
+                LANTERN.Log_Dev("Registering connect...");
+                serverPlayerManager.onPlayerConnect(lanternClientConnection, playerEntity);
+    
+                
+                LANTERN.Log_Dev("Generating GJS2C packet...");
+                GameJoinS2CPacket joinPacket = new GameJoinS2CPacket(
+                    playerEntity.getId(), 
+                    integratedServer.isHardcore(), 
+                    playerEntity.interactionManager.getGameMode(), 
+                    integratedServer.getDefaultGameMode(), 
+                    integratedServer.getWorldRegistryKeys(), // Set of dimension keys
+                    integratedServer.getRegistryManager(), 
+                    RegistryKey.of(RegistryKeys.DIMENSION_TYPE, integratedServer.getOverworld().getDimensionKey().getValue()), // Dimension type (Overworld)
+                    integratedServer.getOverworld().getRegistryKey(), 
+                    integratedServer.getOverworld().getSeed(), 
+                    serverPlayerManager.getMaxPlayerCount(), 
+                    10, 
+                    10, 
+                    false, 
+                    true, 
+                    false, 
+                    integratedServer.getOverworld().isFlat(), 
+                    Optional.empty(), 
+                    serverPlayerManager.getMaxPlayerCount()
+                );
+                LANTERN.Log_Dev("Sending packet...");
+                lanternClientConnection.send(joinPacket);
+                LANTERN.Log_Dev("Packet sent!");
+    
+        
+                LANTERN.Log_Dev("Finalizing connection...");
+                connectedClients.put(playerSocket, username);
+                pendingConnections.remove(playerSocket);
+    
+                String ip = playerSocket.getInetAddress().toString();
+                LANTERN.Log(ip + " has connected.");
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     private void OnPlayerLeft(Socket player)
     {
         String ip = player.getInetAddress().toString();
-        LANTERN.ChatClient(ip + " has disconnected.");
         LANTERN.Log(ip + " has disconnected.");
     }
 
@@ -264,6 +394,20 @@ public class CustomServer
         pendingConnections.clear();
     }
 
+    private String Listen(Socket client)
+    {
+        try
+        {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
+            return reader.readLine();
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private void SendImportant(Socket client, String message)
     {
         new Thread(() ->
@@ -283,6 +427,7 @@ public class CustomServer
 
     public void AcceptAll()
     {
+        LANTERN.ChatClient("Accepting all requests... [" + pendingConnections.size() + "]");
         for(Map.Entry<Socket, String> pending : pendingConnections.entrySet())
         {
             OnPlayerJoined(pending.getKey(), pending.getValue());
@@ -299,7 +444,7 @@ public class CustomServer
                 {
                     if(pending.getKey().getInetAddress().equals(InetAddress.getByName(ip)))
                     {
-                        LANTERN.ChatClient("Allowing '" + ip + "''...");
+                        LANTERN.ChatClient("Allowing '" + pending.getKey().getInetAddress() + "''...");
                         OnPlayerJoined(pending.getKey(), pending.getValue());
                     }
                     LANTERN.ChatClient("Couldn't find " + ip + " in pending connections!");

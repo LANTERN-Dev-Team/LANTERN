@@ -24,6 +24,10 @@ import net.minecraft.text.Text;
 
 // misc
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import io.netty.buffer.Unpooled;
+import net.minecraft.util.Identifier;
+import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 
 
 
@@ -37,6 +41,9 @@ public class LANTERN implements ModInitializer
     public static final boolean devMode = true;
 
 
+    // local player
+    public static String localClientUsername = null;
+
     // server
     public static ServerPlayerEntity localClient = null;
     public static MinecraftServer currentServer = null;
@@ -45,6 +52,9 @@ public class LANTERN implements ModInitializer
     // commands
     private final CommandDispatcher<ServerCommandSource> dispatcher = new CommandDispatcher();
 
+    
+    public static final Identifier ID = new Identifier("lantern", "string_packet"); // for getting the local client username from client side
+
 
 
 
@@ -52,6 +62,10 @@ public class LANTERN implements ModInitializer
 	public void onInitialize()
     {
 		Log("Initializing...");
+        registerUsernameCallback();
+
+		Log("Registering player...");
+        Log("Player registered!");
 
 		Log("Registering commands...");
         RegisterCommands();
@@ -96,5 +110,17 @@ public class LANTERN implements ModInitializer
     {
         if(devMode)
             System.out.println("[LANTERN - DEBUG] : " + message);
+    }
+
+    public static void registerUsernameCallback()
+    {
+        ServerPlayNetworking.registerGlobalReceiver(ID, (server, player, handler, buf, sender) ->
+        {
+            String username = buf.readString(32767);
+            server.execute(() ->
+            {
+                localClientUsername = username;
+            });
+        });
     }
 }

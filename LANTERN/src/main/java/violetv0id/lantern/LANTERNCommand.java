@@ -43,8 +43,8 @@ public class LANTERNCommand
                 .executes(LANTERNCommand::acceptAll)) // /lantern acceptall
 
             .then(CommandManager.literal("reject"))
-                .then(argument("ipToReject", StringArgumentType.string()))
-                    .executes(LANTERNCommand::rejectRequest) // /lantern reject (ip)
+                .then(argument("ipToReject", StringArgumentType.string())
+                    .executes(LANTERNCommand::rejectRequest)) // /lantern reject (ip)
                 .executes(LANTERNCommand::rejectEvery)); // /lantern reject
     }
 
