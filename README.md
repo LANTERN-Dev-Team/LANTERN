@@ -12,8 +12,17 @@ Free, Open-Source, Peer-to-Peer multiplayer for Minecraft.
 # Explanation
 In simple terms, the way Lantern works is as follows:
 - As you host, your **Minecraft client** opens the world to LAN, creating a sort of network.
-- When someone joins, their **Lantern client** sends a request, and the host's **Lantern server** responds with a basic handshake.
-- When you accept the connection, the host's **Lantern server** creates a UUID and ServerPlayerEntity using the username, and sends a packet for the connecting client to join the world through the LAN server.
+- When someone joins, their **Lantern client** and the host's **Lantern server** have a short back-and-fourth:
+
+#
+- Client sends username.
+- Server responds with a confirmation.
+- Client sends UUID.
+- Server responds with a confirmation.
+- Server generates a ServerPlayerEntity, and uses the ClientConnection to create a LanternClientConnection for the player. (Which is just an extension of ClientConnection with extra utils / flexability.)
+- Server sends something called a 'GameJoinS2CPacket', which essentially gives the client info on the server, world, world's seed, gamemode, is hardcore, etc, and connects the player to the LAN server Lantern created.
+
+[This is mostly concept since the GJS2CP hasn't been tested yet, due to other issues.]
 
 
 # Notes
@@ -24,3 +33,9 @@ In simple terms, the way Lantern works is as follows:
 
 # Error Codes
 Got an error code? Find out why [here](https://lantern-dev-team.github.io/LANTERN/err_codes)!
+
+
+
+
+# Issues
+- CustomServer.java / 314  |  LanternClientConnection's "Socket" returns closed, and in return stops any further connection.
