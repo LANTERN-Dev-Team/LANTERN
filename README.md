@@ -1,3 +1,10 @@
+# 🚧 Lantern is no longer in development, and may never be in development again.
+We have no plans to continue development any time soon as we are working on other things.
+
+The code is still licensed, and is not available for use in your own projects, or to build off of.
+
+The general structure (e.g. having seperate classes for the server, client, etc.) is fine to take inspiration from, but any source code can *not* be used.
+
 # Lantern
 Free, Open-Source, Peer-to-Peer multiplayer for Minecraft.
 ![transparente7341b_0](https://github.com/user-attachments/assets/411c266a-7fde-4cdd-bb05-0f8ba65842ed)
